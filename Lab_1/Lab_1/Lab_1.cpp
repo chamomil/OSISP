@@ -124,18 +124,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     static HWND hEdit; // handle for the edit
     static OPENFILENAME ofn; // structure for the file dialog
+    int lenEdit;
+    TCHAR textBuf[1024]{};
+    size_t memSize;
+    HGLOBAL hGlob;
 
     switch (message)
     {
     case WM_CREATE:
     {
         hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, L"EDIT", L"Enter text right here ", WS_CHILD | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
-            0, 0, 1100, 500, hWnd, NULL, hInst, NULL);
+            0, 0, 1000, 500, hWnd, NULL, hInst, NULL);
         if (hEdit == NULL)
         {
             MessageBox(hWnd, L"Edit field failed to create", L"Error", MB_ICONERROR);
             return -1;
         }
+        HWND btn = CreateWindowW(L"Button", L"copy", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 1010, 150, 50, 50, hWnd, (HMENU)IDM_COPY, hInst, NULL);
     }
     break;
     case WM_COMMAND:
@@ -256,6 +261,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
+                break;
+            case IDM_COPY: {
+                lenEdit = GetWindowTextLengthW(hEdit);
+                memSize = sizeof(wchar_t) * (lenEdit + 1);
+                GetWindowTextW(hEdit, (LPWSTR)textBuf, lenEdit + 1);
+                hGlob = GlobalAlloc(GMEM_MOVEABLE, memSize);
+                if (hGlob != NULL)
+                {
+                    void* cbMem = GlobalLock(hGlob); // cb - clipboard
+                    if (cbMem != NULL)
+                    {
+                        memcpy(cbMem, textBuf, memSize);
+                        GlobalUnlock(hGlob);
+                        HANDLE cbHandle;
+
+                        if (OpenClipboard(hEdit))
+                        {
+                            EmptyClipboard();
+                            cbHandle = SetClipboardData(CF_UNICODETEXT, hGlob);
+                        }
+                    }
+                }
+            }
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);

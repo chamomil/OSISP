@@ -8,6 +8,7 @@
 #define IDD_LAB1_DIALOG	102
 #define IDM_OPEN				104
 #define IDM_SAVE				111
+#define IDM_COPY				112
 #define IDM_EXIT				105
 #define IDI_LAB1			107
 #define IDI_SMALL				108
