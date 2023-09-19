@@ -177,7 +177,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         DWORD dwFileSize = GetFileSize(hFile, NULL);
                         if (dwFileSize != INVALID_FILE_SIZE) 
                         {
-                            LPSTR lpFileText = (LPSTR)GlobalAlloc(GPTR, (dwFileSize + 1) * sizeof(WCHAR)); //+1 veans extra byte for null termination
+                            LPSTR lpFileText = (LPSTR)GlobalAlloc(GPTR, (dwFileSize + 1) * sizeof(WCHAR)); //+1 means extra byte for null termination
                             if (lpFileText != NULL)
                             {
                                 DWORD dwRead;
@@ -286,9 +286,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                         if (OpenClipboard(hREdit))
                         {
-                            EmptyClipboard();
                             cbHandle = SetClipboardData(CF_UNICODETEXT, hGlob);
                         }
+                        CloseClipboard();
                     }
                 }
             }
@@ -310,6 +310,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
             }
                 break;
+            case IDM_FONT:
+            {
+                HDC hdc = (HDC)hREdit;
+
+                CHOOSEFONT cf;            
+                static LOGFONT lf;
+                static DWORD rgbCurrent;
+                HFONT hFont, hfontPrev;
+                DWORD rgbPrev;
+
+                ZeroMemory(&cf, sizeof(cf));
+                cf.lStructSize = sizeof(cf);
+                cf.hwndOwner = hWnd;
+                cf.lpLogFont = &lf;
+                cf.rgbColors = rgbCurrent;
+                cf.Flags = CF_SCREENFONTS | CF_EFFECTS;
+
+                if (ChooseFont(&cf) == TRUE)
+                {
+                    hFont = CreateFontIndirect(cf.lpLogFont);
+                    hfontPrev = (HFONT)SelectObject(hdc, hFont);
+                    rgbCurrent = cf.rgbColors;
+                    rgbPrev = SetTextColor(hdc, rgbCurrent);
+
+                    SendMessage(hREdit, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    COLORREF color = cf.rgbColors;
+                    CHARFORMAT chf; 
+                    chf.cbSize = sizeof(chf);
+                    chf.dwEffects = CFE_BOLD; 
+                    chf.crTextColor = color;
+                    chf.dwMask = CFM_BOLD | CFM_COLOR;
+                    SendMessage(hREdit, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&chf);
+                }
+            }
+            break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
@@ -343,7 +378,7 @@ HWND CreateRichEdit(HWND hwndOwner, int x, int y, int width, int height, HINSTAN
     LoadLibrary(TEXT("Msftedit.dll"));
 
     HWND hwndEdit = CreateWindowEx(0, MSFTEDIT_CLASS, TEXT("Type here"),
-        ES_MULTILINE | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
+        WS_CHILD | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_BORDER | WS_TABSTOP,
         x, y, width, height,
         hwndOwner, NULL, hinst, NULL);
 
