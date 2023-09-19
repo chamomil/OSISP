@@ -15,6 +15,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+HWND CreateRichEdit(HWND hwndOwner, int x, int y, int width, int height, HINSTANCE hinst);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -122,25 +123,33 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    static HWND hEdit; // handle for the edit
+    static HWND hREdit; // handle for the edit
     static OPENFILENAME ofn; // structure for the file dialog
     int lenEdit;
     TCHAR textBuf[1024]{};
     size_t memSize;
     HGLOBAL hGlob;
+    static COLORREF acrCustClr[16];
+    static DWORD bgColorCurr;
 
     switch (message)
     {
     case WM_CREATE:
     {
-        hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, L"EDIT", L"Enter text right here ", WS_CHILD | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
-            0, 0, 1000, 500, hWnd, NULL, hInst, NULL);
-        if (hEdit == NULL)
+        hREdit = CreateRichEdit(hWnd, 0, 0, 1000, 500, hInst);
+        //hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, L"EDIT", L"Enter text right here ", WS_CHILD | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
+          //  0, 0, 1000, 500, hWnd, NULL, hInst, NULL);
+        if (hREdit == NULL)
         {
             MessageBox(hWnd, L"Edit field failed to create", L"Error", MB_ICONERROR);
             return -1;
         }
         HWND btn = CreateWindowW(L"Button", L"copy", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 1010, 150, 50, 50, hWnd, (HMENU)IDM_COPY, hInst, NULL);
+        if (hREdit == NULL)
+        {
+            MessageBox(hWnd, L"Button failed to create", L"Error", MB_ICONERROR);
+            return -1;
+        }
     }
     break;
     case WM_COMMAND:
@@ -183,7 +192,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                                         if (lpWideText != NULL)
                                         {
                                             MultiByteToWideChar(CP_UTF8, 0, lpFileText, -1, lpWideText, wideCharCount);
-                                            SetWindowTextW(hEdit, lpWideText); 
+                                            SetWindowTextW(hREdit, lpWideText); 
                                             GlobalFree(lpWideText);
                                         }
                                     }
@@ -210,7 +219,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
             case IDM_SAVE:
             {
-                // Open a file dialog to select or create a text file for writing
                 WCHAR szFileName[MAX_PATH] = L"";
                 ZeroMemory(&ofn, sizeof(OPENFILENAME));
                 ofn.lStructSize = sizeof(OPENFILENAME);
@@ -222,15 +230,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 if (GetSaveFileName(&ofn))
                 {
-                    // Get the text from the Edit control and write it to the selected file
                     HANDLE hFile = CreateFile(szFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                     if (hFile != INVALID_HANDLE_VALUE)
                     {
-                        int len = GetWindowTextLength(hEdit);
+                        int len = GetWindowTextLength(hREdit);
                         LPWSTR lpFileText = (LPWSTR)GlobalAlloc(GPTR, (len + 1) * sizeof(WCHAR));
                         if (lpFileText != NULL)
                         {
-                            GetWindowText(hEdit, lpFileText, len + 1);
+                            GetWindowText(hREdit, lpFileText, len + 1);
                             DWORD dwWritten;
                             int utf8Len = WideCharToMultiByte(CP_UTF8, 0, lpFileText, -1, NULL, 0, NULL, NULL);
                             if (utf8Len > 0) {
@@ -262,10 +269,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
-            case IDM_COPY: {
-                lenEdit = GetWindowTextLengthW(hEdit);
+            case IDM_COPY: 
+            {
+                lenEdit = GetWindowTextLengthW(hREdit);
                 memSize = sizeof(wchar_t) * (lenEdit + 1);
-                GetWindowTextW(hEdit, (LPWSTR)textBuf, lenEdit + 1);
+                GetWindowTextW(hREdit, (LPWSTR)textBuf, lenEdit + 1);
                 hGlob = GlobalAlloc(GMEM_MOVEABLE, memSize);
                 if (hGlob != NULL)
                 {
@@ -276,12 +284,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         GlobalUnlock(hGlob);
                         HANDLE cbHandle;
 
-                        if (OpenClipboard(hEdit))
+                        if (OpenClipboard(hREdit))
                         {
                             EmptyClipboard();
                             cbHandle = SetClipboardData(CF_UNICODETEXT, hGlob);
                         }
                     }
+                }
+            }
+                break;
+            case IDM_COLOR: 
+            {
+                CHOOSECOLOR cc{0};
+                cc.lStructSize = sizeof(cc);
+                cc.hwndOwner = hWnd;
+                cc.lpCustColors = (LPDWORD)acrCustClr;
+                cc.rgbResult = bgColorCurr;
+                cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+                if (ChooseColor(&cc) == TRUE)
+                {
+                    bgColorCurr = cc.rgbResult;
+
+                    SendMessage(hREdit, EM_SETBKGNDCOLOR, FALSE, (LPARAM)bgColorCurr);
                 }
             }
                 break;
@@ -311,4 +336,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+
+HWND CreateRichEdit(HWND hwndOwner, int x, int y, int width, int height, HINSTANCE hinst)
+{
+    LoadLibrary(TEXT("Msftedit.dll"));
+
+    HWND hwndEdit = CreateWindowEx(0, MSFTEDIT_CLASS, TEXT("Type here"),
+        ES_MULTILINE | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
+        x, y, width, height,
+        hwndOwner, NULL, hinst, NULL);
+
+    return hwndEdit;
 }

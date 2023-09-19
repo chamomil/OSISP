@@ -15,3 +15,4 @@
 #include <tchar.h>
 
 #include <commdlg.h>
+#include <Richedit.h>
