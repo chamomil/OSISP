@@ -25,8 +25,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
-
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_LAB1, szWindowClass, MAX_LOADSTRING);
@@ -144,8 +142,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             MessageBox(hWnd, L"Edit field failed to create", L"Error", MB_ICONERROR);
             return -1;
         }
-        HWND btn = CreateWindowW(L"Button", L"copy", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 1010, 150, 50, 50, hWnd, (HMENU)IDM_COPY, hInst, NULL);
-        if (hREdit == NULL)
+
+        HWND btnCopy = CreateWindowW(L"Button", L"copy", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 1010, 150, 50, 50, hWnd, (HMENU)IDM_COPY, hInst, NULL);
+        if (btnCopy == NULL)
         {
             MessageBox(hWnd, L"Button failed to create", L"Error", MB_ICONERROR);
             return -1;
@@ -270,26 +269,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 DestroyWindow(hWnd);
                 break;
             case IDM_COPY: 
-            {
-                lenEdit = GetWindowTextLengthW(hREdit);
-                memSize = sizeof(wchar_t) * (lenEdit + 1);
-                GetWindowTextW(hREdit, (LPWSTR)textBuf, lenEdit + 1);
-                hGlob = GlobalAlloc(GMEM_MOVEABLE, memSize);
-                if (hGlob != NULL)
-                {
-                    void* cbMem = GlobalLock(hGlob); // cb - clipboard
-                    if (cbMem != NULL)
-                    {
-                        memcpy(cbMem, textBuf, memSize);
-                        GlobalUnlock(hGlob);
-                        HANDLE cbHandle;
+            {;
+                CHARRANGE cr;
+                SendMessage(hREdit, EM_EXGETSEL, 0, (LPARAM)&cr);
 
-                        if (OpenClipboard(hREdit))
-                        {
-                            cbHandle = SetClipboardData(CF_UNICODETEXT, hGlob);
-                        }
-                        CloseClipboard();
-                    }
+                if (cr.cpMin != cr.cpMax) {
+                    SendMessage(hREdit, WM_COPY, 0, 0);
                 }
             }
                 break;

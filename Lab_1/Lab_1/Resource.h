@@ -10,7 +10,6 @@
 #define IDM_SAVE				111
 #define IDM_COPY				112
 #define IDM_COLOR				113
-#define IDM_COLOR				113
 #define IDM_FONT				114
 #define IDM_EXIT				105
 #define IDI_LAB1			107
