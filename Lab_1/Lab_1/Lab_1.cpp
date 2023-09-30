@@ -102,7 +102,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE:
     {
-        hREdit = CreateRichEdit(hWnd, 0, 0, 1000, 500, hInst);
+        hREdit = CreateRichEdit(hWnd, 0, 0, 1200, 700, hInst);
         //hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, L"EDIT", L"Enter text right here ", WS_CHILD | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
           //  0, 0, 1000, 500, hWnd, NULL, hInst, NULL);
         if (hREdit == NULL)
@@ -111,12 +111,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             return -1;
         }
 
-        HWND btnCopy = CreateWindowW(L"Button", L"copy", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 1010, 150, 50, 50, hWnd, (HMENU)IDM_COPY, hInst, NULL);
-        if (btnCopy == NULL)
-        {
-            MessageBox(hWnd, L"Button failed to create", L"Error", MB_ICONERROR);
-            return -1;
-        }
+        //HWND btnCopy = CreateWindowW(L"Button", L"copy", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 1010, 150, 50, 50, hWnd, (HMENU)IDM_COPY, hInst, NULL);
+        //if (btnCopy == NULL)
+        //{
+          //  MessageBox(hWnd, L"Button failed to create", L"Error", MB_ICONERROR);
+            //return -1;
+        //}
     }
     break;
     case WM_COMMAND:
